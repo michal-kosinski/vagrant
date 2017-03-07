@@ -1,0 +1,8 @@
+ProxyRequests Off
+ProxyPass /tomcat http://localhost:8080
+ProxyPassReverse /tomcat http://localhost:8080
+
+<Location "/tomcat">
+  Order allow,deny
+  Allow from all
+</Location>

@@ -1,0 +1,88 @@
+---
+- hosts: all
+  remote_user: vagrant
+  sudo: yes
+  tasks:
+    - name: set timezone
+      copy: src=/usr/share/zoneinfo/Europe/Warsaw dest=/etc/localtime owner=root group=root mode=0644
+    - name: install apache
+      apt: pkg=apache2 state=installed update_cache=true
+      notify:
+        - start apache2
+    - name: install tomcat
+      apt: pkg=tomcat7 state=installed update_cache=true
+      notify:
+        - start tomcat7
+    - name: install tomcat-admin
+      apt: pkg=tomcat7-admin state=installed update_cache=true
+    - name: copy tomcat users file
+      copy: src=tomcat/tomcat-users.xml dest=/etc/tomcat7/tomcat-users.xml owner=root group=root mode=0644
+    - name: add tomcat to rc.d
+      shell: update-rc.d tomcat7 defaults
+      register: updaterc_result
+      changed_when: "'already exist' not in updaterc_result.stdout"
+    - name: odata.war deploy
+      copy: src=tomcat/odata.war dest=/var/lib/tomcat7/webapps/odata.war owner:tomcat group:tomcat mode=0644
+    - name: install php
+      apt: pkg=php5 state=installed update_cache=true
+    - name: install nagios
+      apt: pkg=nagios3 state=installed update_cache=true
+    - name: copy nagios configuration 1
+      copy: src=nagios/check_tomcatSessions dest=/usr/lib/nagios/plugins/check_tomcatSessions owner=root group=root mode=0755
+      notify:
+        - restart nagios3
+    - name: copy nagios configuration 2
+      copy: src=nagios/services_nagios2.cfg dest=/etc/nagios3/conf.d/services_nagios2.cfg owner=root group=root mode=0644
+      notify:
+        - restart nagios3
+    - name: copy nagios configuration 3
+      copy: src=nagios/hostgroups_nagios2.cfg dest=/etc/nagios3/conf.d/hostgroups_nagios2.cfg owner=root group=root mode=0644
+      notify:
+        - restart nagios3
+    - name: copy nagios configuration 4
+      copy: src=nagios/tomcat.cfg dest=/etc/nagios-plugins/config/tomcat.cfg owner=root group=root mode=0644
+      notify:
+        - restart nagios3
+    - name: copy nagios configuration 5
+      copy: src=nagios/htpasswd.users dest=/etc/nagios3/htpasswd.users owner=root group=root mode=0644
+      notify:
+        - restart nagios3
+    - name: copy proxypass config for apache
+      copy: src=tomcat/tomcat-proxypass dest=/etc/apache2/sites-available/tomcat-proxypass owner=root group=root mode=0644
+    - name: copy index page
+      copy: src=index.php dest=/var/www/index.php owner=root group=root mode=0644
+    - name: enable ssl for apache
+      shell: a2enmod ssl
+      register: a2enmod_result
+      changed_when: "'already enabled' not in a2enmod_result.stdout"
+      notify:
+        - restart apache2
+    - name: enable proxy_http for apache
+      shell: a2enmod proxy_http
+      register: a2enmod_result
+      changed_when: "'already enabled' not in a2enmod_result.stdout"
+      notify:
+        - restart apache2
+    - name: enable ssl vhost
+      shell: a2ensite default-ssl
+      register: a2ensite_result
+      changed_when: "'already enabled' not in a2ensite_result.stdout"
+      notify:
+        - restart apache2
+    - name: enable tomcat-proxypass 
+      shell: a2ensite tomcat-proxypass
+      register: a2ensite_result
+      changed_when: "'already enabled' not in a2ensite_result.stdout"
+      notify:
+        - restart apache2
+  handlers:
+    - name: start apache2
+      service: name=apache2 state=started
+    - name: start tomcat7
+      service: name=tomcat7 state=started
+    - name: restart apache2
+      service: name=apache2 state=restarted
+    - name: restart tomcat7
+      service: name=tomcat7 state=restarted
+    - name: restart nagios3
+      service: name=nagios3 state=restarted

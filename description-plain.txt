@@ -1,0 +1,45 @@
+1.	Prerequisites:
+-	Vagrant (tested on 1.6.5)
+-	Virtualbox (tested on 4.3.18_Debianr96516)
+-	Ansible (tested on 1.7.2)
+
+2.	Source files:
+nagios/check_tomcatSessions
+nagios/hostgroups_nagios2.cfg
+nagios/htpasswd.users
+nagios/services_nagios2.cfg
+nagios/tomcat.cfg
+tomcat/odata.war
+tomcat/tomcat-proxypass
+tomcat/tomcat-users.xml
+index.php
+playbook.yml
+Vagrantfile
+
+3.	Setup description:
+3.1.	Start VM using http://files.vagrantup.com/precise32.box image (Ubuntu 12.04 LTS)
+3.2.	Forward Apache & Tomcat ports
+3.3.	Use Ansible to provision VM according to requirements. Error handling included.
+a)	Setup correct timezone
+b)	Install & configure Apache (SSL + reverse proxy)
+c)	Install & configure Tomcat + Web Application Manager
+d)	Install & configure Nagios + custom Tomcat sessions script
+e)	Deploy Apache Olingo OData 4.0 Sample Service on Tomcat
+
+4.	Links:
+All necessary links and credentials are available under http://<host_ip>:8080/index.php, i.e.:
+  
+HTTP page on port 8080: http://<host_ip>:8080
+HTTPS page on port 8443 https://<host_ip>:8443
+OData app page on port 8888 http://<host_ip>:8888/odata
+Tomcat manager page on port 8888 (login: tomcat password: admin) http:// <host_ip>:8888/manager/html
+OData app page over reverse proxy on port 8080 http://<host_ip>:8080/tomcat/odata
+Nagios (login: nagiosadmin password: q) http://<host_ip>:8080/nagios3
+Service Status Details For All Hosts (look for TOMCAT_SESSIONS service) http://<host_ip>:8080/cgi-bin/nagios3/status.cgi?host=all
+
+5.	Stress test using ApacheBench:
+5.1.	Command for running simple stress test:
+ab -n 1000 -c 5 http://<host_ip>:8888/odata/ (from Vagrant host)
+ab -n 1000 -c 5 http://localhost:8080/odata/ (from VM)
+(after approx. 1 min. TOMCAT_SESSIONS count should grow and trigger the alarm)
+Use 'Expire sessions' on Tomcat manager page to turn off the alarm.
