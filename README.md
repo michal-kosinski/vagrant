@@ -1,0 +1,2 @@
+# vagrant
+Vagrant + Ansible tests
